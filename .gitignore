@@ -1,0 +1,14 @@
+work/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+*.log
+.DS_Store
+Thumbs.db

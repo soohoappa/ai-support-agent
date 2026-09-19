@@ -1,113 +1,19 @@
-\# RAG Implementation and Validation
+# Knowledge Base Retrieval
 
+## Implementation
 
+`search_knowledge_base()` calls the Bedrock Retrieve API with the configured Knowledge Base ID and the user's query. It uses `managedSearchConfiguration` with `rerankingModelType` set to `NONE`, joins retrieved content, and includes available document locations in a deduplicated source list. Including document locations supports checking where retrieved information originated; source display is an enhancement rather than a separate course requirement.
 
-\## Infrastructure decision
+The source document is `product_catalog.txt` in S3. The implementation uses Bedrock Managed Knowledge Base because the lab role did not permit the OpenSearch provisioning operations specified in the course setup. OpenSearch Serverless is not part of the deployed architecture.
 
+## Deployed validation
 
+Prompt: `What are the benefits of the Platinum loyalty tier?`
 
-The course setup specifies Amazon OpenSearch Serverless and
+The response contained the three expected benefits: free same-day shipping, a 15% discount, and priority customer support. See [the Runtime evidence](screenshots/03-rag-runtime.png).
 
-Amazon Titan Text Embeddings v2.
+The final response in this screenshot includes a blank `Source:` label. The tool's inclusion of document locations does not guarantee that the model displays a complete citation. A separate deployed Kindle query returned the S3 catalog URI, but consistent citation formatting is not claimed.
 
+## Scope
 
-
-The Udacity lab role denied:
-
-\- aoss:ListCollections
-
-\- aoss:CreateSecurityPolicy
-
-\- s3vectors:CreateVectorBucket
-
-
-
-OpenSearch Serverless creation failed. An alternative attempt
-
-using Amazon S3 Vectors also failed due to missing permissions.
-
-
-
-The implementation therefore uses Amazon Bedrock Managed Knowledge Base
-
-with Amazon Titan Text Embeddings v2 (1024 dimensions).
-
-
-
-The application continues to use the Bedrock Retrieve API through
-
-the search\_knowledge\_base tool. Managed retrieval uses
-
-managedSearchConfiguration with rerankingModelType set to NONE.
-
-
-
-\## Data ingestion
-
-
-
-\- Source file: product\_catalog.txt
-
-\- Ingestion status: COMPLETE
-
-\- Documents scanned: 1
-
-\- New documents indexed: 1
-
-\- Failed documents: 0
-
-
-
-\## Local validation
-
-
-
-\### Documented question
-
-
-
-Question: What are the benefits of the Platinum loyalty tier?
-
-
-
-Observed: The agent returned free same-day shipping, a 15% discount,
-
-and priority customer support, with the source URI.
-
-
-
-\### Undocumented question
-
-
-
-Question: Does the Diamond loyalty tier include free international shipping?
-
-
-
-Observed: The agent stated that the retrieved information did not
-
-document the requested tier or benefit and suggested contacting support.
-
-The final tested response included one source URI.
-
-
-
-Earlier responses inferred domestic shipping coverage and repeated
-
-the source URI. Prompt clarification and source deduplication in the
-
-retrieval tool addressed these issues in the latest observed response.
-
-
-
-\## Limitations
-
-
-
-These are local checks, not deployed AgentCore acceptance tests.
-
-Passing these examples does not guarantee grounded answers for all inputs.
-
-The catalog is course data, not verified current Amazon policy.
-
-Other failure, access-control, and security tests remain pending.
+The catalog contains course sample data. These observations demonstrate the tested responses, not correctness for every query or confirmation of current commercial policies. Tool invocation traces are not included in the screenshot evidence.

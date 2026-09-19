@@ -1,0 +1,15 @@
+{
+  "name": "CustomerSupportAgent",
+  "version": 1,
+  "runtimes": [
+    {
+      "name": "customer_support_agent",
+      "build": "CodeZip",
+      "entrypoint": "main.py",
+      "codeLocation": ".",
+      "runtimeVersion": "PYTHON_3_14",
+      "networkMode": "PUBLIC",
+      "protocol": "HTTP"
+    }
+  ]
+}

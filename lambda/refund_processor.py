@@ -58,7 +58,7 @@ def lambda_handler(event, context):
     # If the separator is absent, use the raw value as-is.
     tool = raw_tool.split("___", 1)[-1] if "___" in raw_tool else raw_tool
 
-    print(f"Tool called: {tool} | Event: {json.dumps(event)}")
+    # print(f"Tool called: {tool} | Event: {json.dumps(event)}")
 
     # ── initiate_refund ───────────────────────────────────────────────────────
     if tool == "initiate_refund":

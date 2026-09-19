@@ -96,14 +96,14 @@ def lambda_handler(event, context):
       httpMethod     — GET, POST, etc.
       pathParameters — dict of path variable values, e.g. {"order_id": "ORD-001"}
     """
-    print(f"Event: {json.dumps(event)}")
+    # print(f"Event: {json.dumps(event)}")
 
     # Extract routing fields from the proxy integration event.
     resource = event.get("resource", "")        # e.g. "/orders/{order_id}"
     method   = event.get("httpMethod", "GET")
     params   = event.get("pathParameters") or {}
 
-    print(f"Request: {method} {resource} {params}")
+    # print(f"Request: {method} {resource} {params}")
 
     orders    = _orders()
     customers = _customers()

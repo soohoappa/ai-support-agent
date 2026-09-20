@@ -151,3 +151,13 @@ The Runtime log group has an `ERROR` metric filter named `CustomerSupportErrorFi
 See [the project reflection](docs/reflection.md).
 
 After preserving the submission and evidence, delete the SDK-created Runtime and verify removal in the console. The starter toolkit's `agentcore destroy` must not be assumed to discover a Runtime created separately through boto3. Remove the lab Gateway and targets, Memory, Knowledge Base, S3 data/deployment artifacts, API Gateway, Lambda functions, CloudWatch alarm/filter, and any dedicated deployment resources such as CodeBuild and ECR. Remove unused project-only IAM roles after dependent resources are deleted. Check for any storage created during setup; deleting a Knowledge Base alone does not remove all underlying storage. Cleanup is a remaining operational step until verified.
+
+## Result contracts and failure verification
+
+See [calculation fields, Gateway error handling, and controlled verification](docs/result-contract-and-errors.md). The recorded offline tests are separate from live Runtime evidence. The following artifacts provide the command and response or controlled test output:
+
+- [AgentCore CLI invocation against the deployed Runtime](docs/screenshots/08-agentcore-invoke-runtime.png).
+- [Controlled offline Gateway failure and next-request recovery](docs/screenshots/09-gateway-controlled-failure.png).
+- [Normal and fallback calculation contract checks](docs/screenshots/10-loyalty-result-contract.png).
+
+The CLI screenshot demonstrates a successful cloud invocation. Its generated delivery date differs from the earlier order evidence, so it is not used as an exact date-validation result. Controlled tests use simulated dependencies and do not demonstrate live AWS failure recovery.

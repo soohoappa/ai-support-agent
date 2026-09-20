@@ -1,0 +1,13 @@
+test_calculation_contract_success_and_fallback (test_review_requirements.ReviewTests.test_calculation_contract_success_and_fallback) ... ok
+test_gateway_connection_and_discovery (test_review_requirements.ReviewTests.test_gateway_connection_and_discovery) ... ok
+test_gateway_tool_failure_and_recovery (test_review_requirements.ReviewTests.test_gateway_tool_failure_and_recovery) ... ok
+test_invoke_controlled_failure_then_responsive (test_review_requirements.ReviewTests.test_invoke_controlled_failure_then_responsive) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.026s
+
+OK
+NORMAL: {"points_redeemed": 4000, "points_discount": 40.0, "tier_discount": 11.0, "tier_discount_pct": 10.0, "fallback": false, "message": "Calculated using Code Interpreter.", "final_total": 99.0, "total_savings": 51.0, "points_earned": 99, "remaining_points": 349}
+FALLBACK: {"fallback": true, "message": "Code Interpreter unavailable. Only the tier discount was calculated.", "points_redeemed": 0, "points_discount": 0.0, "tier_discount": 15.0, "tier_discount_pct": 10.0, "final_total": 135.0, "total_savings": 15.0, "points_earned": 0, "remaining_points": 4250}
+CONTROLLED GATEWAY FAILURE: {"status": "error", "message": "Gateway connection failed. Retry later; if it persists, check the Gateway URL and access configuration."}
+NEXT REQUEST: {"status": "ok", "message": "Agent remains responsive."}

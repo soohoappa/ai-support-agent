@@ -445,6 +445,9 @@ def calculate_loyalty_discount(
                         "points_redeemed": points_redeemed,
                         "points_discount": points_discount,
                         "tier_discount": tier_discount,
+                        "tier_discount_pct": float(tier_rates.get(tier, 0.0) * 100),
+                        "fallback": False,
+                        "message": "Calculated using Code Interpreter.",
                         "final_total": final_total,
                         "total_savings": total_savings,
                         "points_earned": points_earned,
@@ -469,7 +472,12 @@ def calculate_loyalty_discount(
                     structured = result.get("structuredContent") or {}
                     if result.get("isError") or structured.get("exitCode", 0) != 0:
                         raise RuntimeError(f"Code Interpreter execution failed: {result}")
-                    return json.dumps(result)
+                    calculation = json.loads(structured["stdout"])
+                    required = {"points_redeemed", "points_discount", "tier_discount", "tier_discount_pct",
+                                "final_total", "total_savings", "points_earned", "remaining_points"}
+                    if not required.issubset(calculation):
+                        raise ValueError("Incomplete calculation result")
+                    return json.dumps(calculation)
 
             raise RuntimeError("Code Interpreter returned no result.")
 
@@ -492,9 +500,69 @@ def calculate_loyalty_discount(
                 "Code Interpreter unavailable. "
                 "Only the tier discount was calculated."
             ),
+            "points_redeemed": 0,
+            "points_discount": 0.0,
             "tier_discount": tier_discount,
+            "tier_discount_pct": float(tier_rates.get(tier, 0.0) * 100),
             "final_total": round(order_total - tier_discount, 2),
+            "total_savings": tier_discount,
+            "points_earned": 0,
+            "remaining_points": loyalty_points,
         })
+
+
+class GatewayError(RuntimeError):
+    """A safe, operation-specific Gateway failure."""
+
+
+class SupportGatewayClient(MCPClient):
+    """Keep Gateway failures actionable without returning upstream error details."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.failed_operations = []
+
+    def __enter__(self):
+        try:
+            return super().__enter__()
+        except Exception:
+            raise GatewayError(
+                "Gateway connection failed. Retry later; if it persists, check the Gateway URL and access configuration."
+            ) from None
+
+    def list_tools_sync(self, *args, **kwargs):
+        try:
+            return super().list_tools_sync(*args, **kwargs)
+        except Exception:
+            raise GatewayError(
+                "Gateway tool discovery failed. Retry later or check the Gateway target configuration."
+            ) from None
+
+    async def call_tool_async(self, tool_use_id, name, arguments=None, **kwargs):
+        try:
+            result = await super().call_tool_async(tool_use_id, name, arguments, **kwargs)
+            if result.get("status") != "error":
+                return result
+        except Exception:
+            result = None
+        operation = {
+            "order-tracker___get_order": "order lookup",
+            "order-tracker___get_customer": "customer lookup",
+            "order-tracker___get_customer_orders": "customer order lookup",
+            "refund-processor___initiate_refund": "refund initiation",
+            "refund-processor___check_refund_status": "refund status lookup",
+            "refund-processor___get_return_label": "return label generation",
+        }.get(name, "requested tool operation")
+        if name == "refund-processor___initiate_refund":
+            message = (
+                "Gateway refund initiation failed or timed out. The outcome is unknown. "
+                "Check refund status or contact support before retrying to avoid duplicate requests."
+            )
+        else:
+            message = f"Gateway {operation} failed or timed out. Retry later; if it persists, check the Gateway target configuration."
+        self.failed_operations.append(message)
+        logger.error("Gateway operation failed: %s", operation)
+        return {"toolUseId": tool_use_id, "status": "error", "content": [{"text": message}]}
 
 
 # ── TODO 8 — Agent Entrypoint ─────────────────────────────────────────────────
@@ -562,7 +630,7 @@ async def invoke(payload, context=None):
     if not GATEWAY_URL:
         return {
             "status": "error",
-            "message": "Gateway is not configured.",
+            "message": "Gateway is not configured. Set GATEWAY_URL to the Gateway MCP endpoint and retry.",
         }
 
     try:
@@ -578,7 +646,7 @@ async def invoke(payload, context=None):
 
         agent_core_browser = AgentCoreBrowser(region=REGION)
 
-        with MCPClient(
+        with SupportGatewayClient(
             lambda: streamable_http_client(GATEWAY_URL)
         ) as gateway_client:
             gateway_tools = gateway_client.list_tools_sync()
@@ -620,6 +688,11 @@ async def invoke(payload, context=None):
             )
 
             result = await agent.invoke_async(prompt.strip())
+            if gateway_client.failed_operations:
+                return {
+                    "status": "error",
+                    "message": " ".join(dict.fromkeys(gateway_client.failed_operations)),
+                }
 
             # for message in agent.messages:
             #     for block in message.get("content", []):
@@ -633,6 +706,9 @@ async def invoke(payload, context=None):
                 "status": "ok",
                 "message": str(result),
             }
+    except GatewayError as error:
+        logger.error("%s", error)
+        return {"status": "error", "message": str(error)}
     except Exception:
         logger.exception("Support agent invocation failed")
         return {
